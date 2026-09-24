@@ -29,19 +29,14 @@ def main():
 
     if args.line:
         traps = [t for t in traps if t.line.lower() == args.line.lower()]
-    overdue = [t for t in traps if (t.days_overdue() or 0) > args.days]
+    # Traps with no records have never been set, so they aren't overdue.
+    overdue = [t for t in traps if t.last_checked and t.days_overdue() > args.days]
     overdue.sort(key=lambda t: (-t.days_overdue(), t.code))
 
     title = f"{', '.join(projects)}{' – ' + args.line if args.line else ''}"
     if not overdue:
         console.print(f"No traps in {title} overdue by more than {args.days:g} days.")
         return 0
-
-    try:
-        trapnz.fill_last_status(overdue)
-    except trapnz.TrapNZError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
 
     table = Table(title=f"{title}: {len(overdue)} trap(s) not checked for > {args.days:g} days")
     table.add_column("Trap ID", justify="right")
@@ -51,13 +46,12 @@ def main():
     table.add_column("Line")
     table.add_column("Last checked")
     table.add_column("Days", justify="right")
-    table.add_column("Last status")
     for t in overdue:
         row = [str(t.nid), t.code]
         if len(projects) > 1:
             row.append(t.project)
         last = trapnz.fmt_date(t.last_checked)
-        row += [t.line, last, f"{t.days_overdue():.0f}", t.last_status or "-"]
+        row += [t.line, last, f"{t.days_overdue():.0f}"]
         table.add_row(*row)
     console.print(table)
     return 0
