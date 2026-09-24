@@ -11,7 +11,9 @@ import argparse
 import json
 import os
 import sys
+import time
 from collections import defaultdict
+from datetime import datetime
 
 import requests
 
@@ -53,13 +55,27 @@ def main():
     parser.add_argument("--csv", default=trapnz.DEFAULT_CSV, help="trap line assignments CSV")
     parser.add_argument("--dry-run", action="store_true",
                         help="print notifications instead of sending; don't update state")
+    parser.add_argument("--retries", type=int, default=5,
+                        help="times to retry fetching from Trap.NZ, e.g. while the network "
+                             "comes back after waking from sleep (default 5)")
+    parser.add_argument("--retry-wait", type=float, default=60,
+                        help="seconds between retries (default 60)")
     args = parser.parse_args()
 
-    try:
-        traps = trapnz.get_traps(trapnz_secrets.PROJECT_IDS, args.csv)
-    except trapnz.TrapNZError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
+    print(f"--- {datetime.now():%Y-%m-%d %H:%M:%S}", flush=True)
+    for attempt in range(args.retries + 1):
+        try:
+            traps = trapnz.get_traps(trapnz_secrets.PROJECT_IDS, args.csv)
+            break
+        except trapnz.UnmappedTrapsError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except trapnz.TrapNZError as e:
+            if attempt == args.retries:
+                print(f"Error: {e}", file=sys.stderr)
+                return 1
+            print(f"{e}; retrying in {args.retry_wait:g}s", file=sys.stderr, flush=True)
+            time.sleep(args.retry_wait)
 
     # Group overdue traps by line; a line's level is set by its longest-unchecked trap.
     lines = defaultdict(list)   # (project, line) -> [overdue traps]

@@ -4,6 +4,7 @@ secrets.py
 TrapLineAssignments.csv
 state.json
 state.json.tmp
+check_traps.log
 
 # Local reference material
 TrapNZAPI.pdf

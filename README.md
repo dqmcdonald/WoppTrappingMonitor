@@ -81,10 +81,49 @@ On the very first run every line that is already overdue gets one message.
 
 ## Scheduling
 
-cron (daily at 7am):
+On macOS use launchd rather than cron. If the Mac is asleep at the scheduled time, cron skips the run, but launchd runs it as soon as the Mac wakes. Several missed days still produce only one run. Neither runs while the Mac is shut down.
+
+Create `~/Library/LaunchAgents/nz.wopp.checktraps.plist` (daily at 7am; adjust the paths):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>nz.wopp.checktraps</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/you/venvs/tf/bin/python</string>
+        <string>/path/to/WoppTrappingMonitor/check_traps.py</string>
+    </array>
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key><integer>7</integer>
+        <key>Minute</key><integer>0</integer>
+    </dict>
+    <key>StandardOutPath</key>
+    <string>/path/to/WoppTrappingMonitor/check_traps.log</string>
+    <key>StandardErrorPath</key>
+    <string>/path/to/WoppTrappingMonitor/check_traps.log</string>
+</dict>
+</plist>
+```
+
+Then:
+
+```sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/nz.wopp.checktraps.plist   # load
+launchctl kickstart gui/$(id -u)/nz.wopp.checktraps                                 # run now to test
+launchctl bootout gui/$(id -u)/nz.wopp.checktraps                                   # remove
+```
+
+A run right after waking may start before the network is back, so `check_traps.py` retries fetching from Trap.NZ (5 retries, 60 s apart by default; see `--retries` and `--retry-wait`). Each run writes a timestamp line to the log.
+
+On Linux, cron works:
 
 ```cron
-0 7 * * * /Users/you/venvs/tf/bin/python /path/to/WoppTrappingMonitor/check_traps.py >> /path/to/WoppTrappingMonitor/check_traps.log 2>&1
+0 7 * * * /path/to/venv/bin/python /path/to/WoppTrappingMonitor/check_traps.py >> /path/to/WoppTrappingMonitor/check_traps.log 2>&1
 ```
 
 Paths for the CSV and state file are resolved relative to the script, so the working directory doesn't matter.
