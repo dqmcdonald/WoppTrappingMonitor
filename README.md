@@ -110,13 +110,22 @@ Create `~/Library/LaunchAgents/nz.wopp.checktraps.plist` (daily at 7am; adjust t
 </plist>
 ```
 
-Then:
+Then load it:
 
 ```sh
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/nz.wopp.checktraps.plist   # load
-launchctl kickstart gui/$(id -u)/nz.wopp.checktraps                                 # run now to test
-launchctl bootout gui/$(id -u)/nz.wopp.checktraps                                   # remove
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/nz.wopp.checktraps.plist
 ```
+
+### Useful commands
+
+```sh
+launchctl kickstart gui/$(id -u)/nz.wopp.checktraps        # run it now
+cat /path/to/WoppTrappingMonitor/check_traps.log           # see what happened
+launchctl print gui/$(id -u)/nz.wopp.checktraps | grep -E "state =|last exit"   # is it loaded, did the last run succeed
+launchctl bootout gui/$(id -u)/nz.wopp.checktraps          # stop scheduling it
+```
+
+After editing the plist, run the `bootout` command and then the `bootstrap` command again to reload it.
 
 A run right after waking may start before the network is back, so `check_traps.py` retries fetching from Trap.NZ (5 retries, 60 s apart by default; see `--retries` and `--retry-wait`). Each run writes a timestamp line to the log.
 
