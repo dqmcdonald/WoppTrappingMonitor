@@ -3,7 +3,7 @@
 Scripts to monitor trap checking across [Trap.NZ](https://trap.nz) projects:
 
 - **`overdue.py`** – prints a table of traps that haven't been checked for more than N days.
-- **`check_traps.py`** – designed to run daily; sends [ntfy](https://ntfy.sh) alerts for traps that are overdue, escalating at N, 2N, 3N… days.
+- **`check_traps.py`** – designed to run daily; sends one [ntfy](https://ntfy.sh) alert per line when its traps are overdue, escalating at N, 2N, 3N… days.
 
 Trap lines aren't always assigned in Trap.NZ, so each trap's line (colour) comes from a local `TrapLineAssignments.csv`.
 
@@ -73,11 +73,11 @@ python check_traps.py -n 20        # use a different interval
 
 ### How notifications escalate
 
-For each trap, `check_traps.py` works out `level = floor(days since last check / N)`. It notifies when the level reaches 1 (N days), then again at 2 (2N days), 3 (3N days) and so on. The level is stored in `state.json` next to the script, and it resets as soon as a new check of the trap is recorded in Trap.NZ. A trap that has never been checked counts from its install date.
+Notifications are per **line** (one ntfy topic per project/line in `NTFY_TOPICS`). A line's level is `floor(days since its longest-unchecked trap was checked / N)`. The line gets a single notification when its level reaches 1 (N days), another at 2 (2N days), 3 (3N days) and so on. Each message lists every trap on the line that is N or more days overdue, with its last check date and last status. A trap that has never been checked counts from its install date.
 
-Each run sends at most **one message per line topic**, listing every trap on that line that reached a new level. State is only updated for messages that were sent successfully, so a failed send is retried on the next run.
+The last notified level for each line is stored in `state.json` next to the script. When the line is checked, its level drops and counting starts again from there. State is only updated after a message is sent successfully, so a failed send is retried on the next run.
 
-On the very first run every trap that is already overdue gets reported.
+On the very first run every line that is already overdue gets one message.
 
 ## Scheduling
 
