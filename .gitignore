@@ -2,6 +2,7 @@
 trapnz_secrets.py
 secrets.py
 TrapLineAssignments.csv
+*.bak
 state.json
 state.json.tmp
 check_traps.log
