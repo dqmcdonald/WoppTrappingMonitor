@@ -43,14 +43,11 @@ class Trap:
     project: str          # key in trapnz_secrets.PROJECT_IDS
     project_id: int
     line: str             # colour from TrapLineAssignments.csv
-    last_checked: datetime | None
-    installed: datetime | None
-    last_status: str = ""
+    last_checked: datetime | None   # None if the trap has never been set
 
     def days_overdue(self, now=None):
-        """Days since last check, or since install if never checked."""
-        ref = self.last_checked or self.installed
-        return days_since(ref, now)
+        """Days since last check, or None if never checked."""
+        return days_since(self.last_checked, now)
 
 
 def parse_dt(value):
@@ -120,8 +117,7 @@ def get_traps(projects, csv_path=DEFAULT_CSV):
     rows = wfs_get(
         "my-projects-traps",
         cql_filter=f"project_id IN ({ids}) AND retired = 0",
-        properties=["project", "project_id", "trap_id", "code", "date_installed",
-                    "last_record_date", "retired"],
+        properties=["project", "project_id", "trap_id", "code", "last_record_date", "retired"],
     )
     traps, unmapped = [], []
     for row in rows:
@@ -138,35 +134,10 @@ def get_traps(projects, csv_path=DEFAULT_CSV):
             project_id=int(row["project_id"]),
             line=assignment["line"],
             last_checked=parse_dt(row["last_record_date"]),
-            installed=parse_dt(row["date_installed"]),
         ))
     if unmapped:
         raise UnmappedTrapsError(unmapped)
     return traps
-
-
-def fill_last_status(traps):
-    """Set trap.last_status from each trap's most recent trap record."""
-    traps = [t for t in traps if t.last_checked]
-    if not traps:
-        return
-    ids = ",".join(str(t.nid) for t in traps)
-    rows = wfs_get(
-        "my-projects-trap-records",
-        cql_filter=f"trap_id IN ({ids})",
-        properties=["trap_id", "trap_status", "record_date"],
-    )
-    latest = {}
-    for row in rows:
-        dt = parse_dt(row["record_date"])
-        if dt is None:
-            continue
-        nid = int(row["trap_id"])
-        if nid not in latest or dt > latest[nid][0]:
-            latest[nid] = (dt, row["trap_status"] or "")
-    for t in traps:
-        if t.nid in latest:
-            t.last_status = latest[t.nid][1]
 
 
 def fmt_date(dt):

@@ -73,7 +73,7 @@ python check_traps.py -n 20        # use a different interval
 
 ### How notifications escalate
 
-Notifications are per **line** (one ntfy topic per project/line in `NTFY_TOPICS`). A line's level is `floor(days since its longest-unchecked trap was checked / N)`. The line gets a single notification when its level reaches 1 (N days), another at 2 (2N days), 3 (3N days) and so on. Each message lists every trap on the line that is N or more days overdue, with its last check date and last status. A trap that has never been checked counts from its install date.
+Notifications are per **line** (one ntfy topic per project/line in `NTFY_TOPICS`). A line's level is `floor(days since its longest-unchecked trap was checked / N)`. The line gets a single notification when its level reaches 1 (N days), another at 2 (2N days), 3 (3N days) and so on. Each message lists every trap on the line that is N or more days overdue, with its last check date. Traps that have never been set (no records in Trap.NZ) are ignored.
 
 The last notified level for each line is stored in `state.json` next to the script. When the line is checked, its level drops and counting starts again from there. State is only updated after a message is sent successfully, so a failed send is retried on the next run.
 

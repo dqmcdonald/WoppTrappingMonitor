@@ -63,9 +63,9 @@ def main():
 
     # Group overdue traps by line; a line's level is set by its longest-unchecked trap.
     lines = defaultdict(list)   # (project, line) -> [overdue traps]
+    # Traps with no records have never been set, so they aren't overdue.
     for t in traps:
-        days = t.days_overdue()
-        if days is not None and days >= args.days:
+        if t.last_checked and t.days_overdue() >= args.days:
             lines[(t.project, t.line)].append(t)
 
     state = load_state(args.state)
@@ -81,11 +81,6 @@ def main():
         if level >= 1 and level > notified:
             pending[key] = (overdue, level)
 
-    try:
-        trapnz.fill_last_status([t for overdue, _ in pending.values() for t in overdue])
-    except trapnz.TrapNZError as e:
-        print(f"Warning: couldn't fetch last statuses: {e}", file=sys.stderr)
-
     errors = 0
     for (project, line), (overdue, level) in sorted(pending.items()):
         overdue.sort(key=lambda t: (-t.days_overdue(), t.code))
@@ -93,8 +88,7 @@ def main():
         oldest = overdue[0].days_overdue()
         title = f"{project} {line} line: {len(overdue)} trap(s) not checked for {args.days:g}+ days"
         body = "\n".join(
-            f"{t.code}  last checked {trapnz.fmt_date(t.last_checked)}  "
-            f"{t.days_overdue():.0f}d  {t.last_status or '-'}"
+            f"{t.code}  last checked {trapnz.fmt_date(t.last_checked)}  {t.days_overdue():.0f}d"
             for t in overdue
         )
         if topic is None:
