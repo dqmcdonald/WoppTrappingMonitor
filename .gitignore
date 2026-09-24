@@ -1,0 +1,14 @@
+# Private config and data
+trapnz_secrets.py
+secrets.py
+TrapLineAssignments.csv
+state.json
+state.json.tmp
+
+# Local reference material
+TrapNZAPI.pdf
+plan.txt
+
+__pycache__/
+*.pyc
+.DS_Store
