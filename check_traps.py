@@ -1,8 +1,9 @@
 #!/usr/bin/env python
-"""Daily check: send ntfy alerts for lines with traps not checked for N, 2N, 3N ... days.
+"""Daily check: send ntfy alerts for lines with traps not checked for N days.
 
 Each line (trapnz_secrets.NTFY_TOPICS) gets a single notification when its
-longest-unchecked trap reaches N days, another at 2N, and so on. Each message
+longest-unchecked trap reaches N days (default 15), then another every R days
+after that (default 7: at 22, 29, 36 ... days). Each message
 lists every trap on the line that is N+ days overdue. Once the line is checked
 the count starts again.
 """
@@ -38,6 +39,11 @@ def save_state(path, state):
     os.replace(tmp, path)
 
 
+def line_level(days, first, repeat):
+    """0 before `first` days, 1 at `first`, then +1 every `repeat` days."""
+    return 0 if days < first else 1 + int((days - first) // repeat)
+
+
 def send_ntfy(topic, title, body):
     server = getattr(trapnz_secrets, "NTFY_SERVER", "https://ntfy.sh").rstrip("/")
     r = requests.post(f"{server}/{topic}", data=body.encode("utf-8"),
@@ -50,7 +56,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("-n", "--days", type=float, default=15,
-                        help="notification interval in days (default 15)")
+                        help="days overdue before the first notification (default 15)")
+    parser.add_argument("-r", "--repeat", type=float, default=7,
+                        help="days between repeat notifications after that (default 7)")
     parser.add_argument("--state", default=DEFAULT_STATE, help="state file (default state.json)")
     parser.add_argument("--csv", default=trapnz.DEFAULT_CSV, help="trap line assignments CSV")
     parser.add_argument("--dry-run", action="store_true",
@@ -90,7 +98,8 @@ def main():
     for key in {(t.project, t.line) for t in traps}:
         state_key = f"{key[0]} | {key[1]}"
         overdue = lines.get(key, [])
-        level = int(max(t.days_overdue() for t in overdue) // args.days) if overdue else 0
+        oldest = max((t.days_overdue() for t in overdue), default=0)
+        level = line_level(oldest, args.days, args.repeat)
         # If the line has been (partly) checked since, its level drops; start counting from there.
         notified = min(state.get(state_key, {}).get("notified_level", 0), level)
         new_state[state_key] = {"notified_level": notified}

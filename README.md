@@ -3,7 +3,7 @@
 Scripts to monitor trap checking across [Trap.NZ](https://trap.nz) projects:
 
 - **`overdue.py`** – prints a table of traps that haven't been checked for more than N days.
-- **`check_traps.py`** – designed to run daily; sends one [ntfy](https://ntfy.sh) alert per line when its traps are overdue, escalating at N, 2N, 3N… days.
+- **`check_traps.py`** – designed to run daily; sends one [ntfy](https://ntfy.sh) alert per line when its traps are overdue, at 15 days overdue and then every 7 days after that.
 
 Trap lines aren't always assigned in Trap.NZ, so each trap's line (colour) comes from a local `TrapLineAssignments.csv`.
 
@@ -68,14 +68,14 @@ python check_traps.py --dry-run
 
 # Normal daily run (N = 15)
 python check_traps.py
-python check_traps.py -n 20        # use a different interval
+python check_traps.py -n 20 -r 10  # first alert at 20 days, then every 10 days
 ```
 
 ### How notifications escalate
 
-Notifications are per **line** (one ntfy topic per project/line in `NTFY_TOPICS`). A line's level is `floor(days since its longest-unchecked trap was checked / N)`. The line gets a single notification when its level reaches 1 (N days), another at 2 (2N days), 3 (3N days) and so on. Each message lists every trap on the line that is N or more days overdue, with its last check date. Traps that have never been set (no records in Trap.NZ) are ignored.
+Notifications are per **line** (one ntfy topic per project/line in `NTFY_TOPICS`). A line gets a single notification when its longest-unchecked trap reaches N days (`-n`, default 15), then another every R days after that (`-r`, default 7), i.e. at 15, 22, 29, 36… days. Each message lists every trap on the line that is N or more days overdue, with its last check date. Traps that have never been set (no records in Trap.NZ) are ignored.
 
-The last notified level for each line is stored in `state.json` next to the script. When the line is checked, its level drops and counting starts again from there. State is only updated after a message is sent successfully, so a failed send is retried on the next run.
+The number of notifications sent so far for each line (its level) is stored in `state.json` next to the script. When the line is checked, its level drops and counting starts again from there. State is only updated after a message is sent successfully, so a failed send is retried on the next run.
 
 On the very first run every line that is already overdue gets one message.
 
