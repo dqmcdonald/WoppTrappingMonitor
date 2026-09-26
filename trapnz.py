@@ -46,7 +46,7 @@ class Trap:
     last_checked: datetime | None   # None if the trap has never been set
 
     def days_overdue(self, now=None):
-        """Days since last check, or None if never checked."""
+        """Calendar days since last check, or None if never checked."""
         return days_since(self.last_checked, now)
 
 
@@ -57,10 +57,12 @@ def parse_dt(value):
 
 
 def days_since(dt, now=None):
+    """Whole calendar days (local time) from dt's date to now's date, so a trap
+    checked any time on the 1st is 1 day overdue for all of the 2nd."""
     if dt is None:
         return None
     now = now or datetime.now(timezone.utc)
-    return (now - dt).total_seconds() / 86400
+    return (now.astimezone().date() - dt.astimezone().date()).days
 
 
 def wfs_get(type_name, cql_filter=None, properties=None):

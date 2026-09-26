@@ -2,7 +2,7 @@
 
 Scripts to monitor trap checking across [Trap.NZ](https://trap.nz) projects:
 
-- **`overdue.py`** – prints a table of traps that haven't been checked for more than N days.
+- **`overdue.py`** – prints a table of traps that haven't been checked for N or more days.
 - **`check_traps.py`** – designed to run daily; sends one [ntfy](https://ntfy.sh) alert per line when its traps are overdue, at 15 days overdue and then every 7 days after that.
 
 Trap lines aren't always assigned in Trap.NZ, so each trap's line (colour) comes from a local `TrapLineAssignments.csv`.
@@ -53,10 +53,10 @@ The API key is a Trap.NZ **WFS** key, so data is read from the WFS feed
 ## Usage
 
 ```sh
-# Coastal traps not checked for more than 15 days (default)
+# Coastal traps not checked for 15+ days (default)
 python overdue.py coastal
 
-# Stoddart Point, Pink line only, more than 10 days
+# Stoddart Point, Pink line only, 10+ days
 python overdue.py stoddart -l pink -d 10
 ```
 
@@ -73,7 +73,7 @@ python check_traps.py -n 20 -r 10  # first alert at 20 days, then every 10 days
 
 ### How notifications escalate
 
-Notifications are per **line** (one ntfy topic per project/line in `NTFY_TOPICS`). A line gets a single notification when its longest-unchecked trap reaches N days (`-n`, default 15), then another every R days after that (`-r`, default 7), i.e. at 15, 22, 29, 36… days. Each message lists every trap on the line that is N or more days overdue, with its last check date. Traps that have never been set (no records in Trap.NZ) are ignored.
+Notifications are per **line** (one ntfy topic per project/line in `NTFY_TOPICS`). A line gets a single notification when its longest-unchecked trap reaches N days (`-n`, default 15), then another every R days after that (`-r`, default 7), i.e. at 15, 22, 29, 36… days. Each message lists every trap on the line that is N or more days overdue, with its last check date. Days are whole calendar days, so a trap checked any time on 21 Aug counts as 36 days overdue all of 26 Sep. Traps that have never been set (no records in Trap.NZ) are ignored.
 
 The number of notifications sent so far for each line (its level) is stored in `state.json` next to the script. When the line is checked, its level drops and counting starts again from there. State is only updated after a message is sent successfully, so a failed send is retried on the next run.
 

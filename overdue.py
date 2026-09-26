@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""List traps in a Trap.NZ project that haven't been checked for more than N days."""
+"""List traps in a Trap.NZ project that haven't been checked for N+ days."""
 
 import argparse
 import sys
@@ -15,7 +15,7 @@ def main():
     parser.add_argument("project", help="project name (case-insensitive partial match)")
     parser.add_argument("-l", "--line", help="only show this line colour, e.g. Purple")
     parser.add_argument("-d", "--days", type=float, default=15,
-                        help="show traps not checked for more than this many days (default 15)")
+                        help="show traps not checked for at least this many days (default 15)")
     parser.add_argument("--csv", default=trapnz.DEFAULT_CSV, help="trap line assignments CSV")
     args = parser.parse_args()
 
@@ -30,15 +30,15 @@ def main():
     if args.line:
         traps = [t for t in traps if t.line.lower() == args.line.lower()]
     # Traps with no records have never been set, so they aren't overdue.
-    overdue = [t for t in traps if t.last_checked and t.days_overdue() > args.days]
+    overdue = [t for t in traps if t.last_checked and t.days_overdue() >= args.days]
     overdue.sort(key=lambda t: (-t.days_overdue(), t.code))
 
     title = f"{', '.join(projects)}{' – ' + args.line if args.line else ''}"
     if not overdue:
-        console.print(f"No traps in {title} overdue by more than {args.days:g} days.")
+        console.print(f"No traps in {title} overdue by {args.days:g}+ days.")
         return 0
 
-    table = Table(title=f"{title}: {len(overdue)} trap(s) not checked for > {args.days:g} days")
+    table = Table(title=f"{title}: {len(overdue)} trap(s) not checked for {args.days:g}+ days")
     table.add_column("Trap ID", justify="right")
     table.add_column("Code")
     if len(projects) > 1:
